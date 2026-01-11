@@ -68,8 +68,8 @@ export default function BarberRegister() {
             if (signUpError) throw signUpError;
 
             if (data.user) {
-                // Create user record
-                await supabase.from('users').insert({
+                // Create user record with error handling
+                const { error: userInsertError } = await supabase.from('users').insert({
                     id: data.user.id,
                     email: userData.email,
                     full_name: userData.fullName,
@@ -77,8 +77,13 @@ export default function BarberRegister() {
                     user_type: 'barber',
                 });
 
+                if (userInsertError) {
+                    console.error('User insert error:', userInsertError);
+                    throw new Error('Failed to create user profile: ' + userInsertError.message);
+                }
+
                 // Create shop
-                await createShop({
+                const shop = await createShop({
                     owner_id: data.user.id,
                     shop_name: shopData.shopName,
                     description: shopData.description,
@@ -90,6 +95,10 @@ export default function BarberRegister() {
                     opening_time: shopData.openingTime,
                     closing_time: shopData.closingTime,
                 });
+
+                if (!shop) {
+                    throw new Error('Failed to create shop');
+                }
 
                 router.push('/barber/dashboard');
             }

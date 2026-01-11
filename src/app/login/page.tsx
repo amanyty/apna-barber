@@ -44,28 +44,21 @@ export default function Login() {
 
                 if (userData?.is_admin) {
                     router.push('/admin/dashboard');
-                    router.refresh(); // Ensure auth state is updated
                 } else if (userData?.user_type === 'barber') {
                     router.push('/barber/dashboard');
-                    router.refresh();
                 } else if (userData) {
-                    // Default to customer dashboard for customers
                     router.push('/dashboard');
-                    router.refresh();
                 } else {
-                    // User exists in Auth but not in public.users (likely from the registration bug)
-                    // We can try to recover or show an error
-                    // For now, let's treat them as a new customer and create the record
+                    // User exists in Auth but not in public.users - create profile
                     const { error: insertError } = await supabase.from('users').insert({
                         id: data.user.id,
                         email: email,
-                        full_name: 'User', // Placeholder
+                        full_name: 'User',
                         user_type: 'customer'
                     });
 
                     if (!insertError) {
                         router.push('/dashboard');
-                        router.refresh();
                     } else {
                         setError('Account profile missing. Please register again.');
                     }
