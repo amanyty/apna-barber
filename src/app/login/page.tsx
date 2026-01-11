@@ -43,11 +43,11 @@ export default function Login() {
                 }
 
                 if (userData?.is_admin) {
-                    router.push('/admin/dashboard');
+                    window.location.href = '/admin/dashboard';
                 } else if (userData?.user_type === 'barber') {
-                    router.push('/barber/dashboard');
+                    window.location.href = '/barber/dashboard';
                 } else if (userData) {
-                    router.push('/dashboard');
+                    window.location.href = '/dashboard';
                 } else {
                     // User exists in Auth but not in public.users - auto-detect user type
                     // Check if they own a shop (indicates they're a barber)
@@ -68,11 +68,12 @@ export default function Login() {
 
                     if (!insertError) {
                         if (detectedUserType === 'barber') {
-                            router.push('/barber/dashboard');
+                            window.location.href = '/barber/dashboard';
                         } else {
-                            router.push('/dashboard');
+                            window.location.href = '/dashboard';
                         }
                     } else {
+                        console.error('Insert error:', insertError);
                         setError('Account profile missing. Please register again.');
                     }
                 }
