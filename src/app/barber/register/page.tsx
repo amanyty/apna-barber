@@ -59,30 +59,47 @@ export default function BarberRegister() {
         setError('');
 
         try {
+            console.log('Starting barber registration...');
+
             // Create user account
             const { data, error: signUpError } = await supabase.auth.signUp({
                 email: userData.email,
                 password: userData.password,
             });
 
-            if (signUpError) throw signUpError;
+            console.log('SignUp result:', { hasData: !!data, hasError: !!signUpError });
 
-            if (data.user) {
-                // Create user record with error handling
-                const { error: userInsertError } = await supabase.from('users').insert({
-                    id: data.user.id,
-                    email: userData.email,
-                    full_name: userData.fullName,
-                    phone: userData.phone,
-                    user_type: 'barber',
-                });
+            if (signUpError) {
+                console.error('SignUp error:', signUpError);
+                throw signUpError;
+            }
 
-                if (userInsertError) {
-                    console.error('User insert error:', userInsertError);
-                    throw new Error('Failed to create user profile: ' + userInsertError.message);
-                }
+            if (!data.user) {
+                throw new Error('No user returned from signup');
+            }
 
-                // Create shop
+            console.log('User created, ID:', data.user.id);
+
+            // Create user record with error handling
+            console.log('Creating user record in database...');
+            const { error: userInsertError } = await supabase.from('users').insert({
+                id: data.user.id,
+                email: userData.email,
+                full_name: userData.fullName,
+                phone: userData.phone,
+                user_type: 'barber',
+            });
+
+            if (userInsertError) {
+                console.error('User insert error:', userInsertError);
+                throw new Error('Failed to create user profile: ' + userInsertError.message);
+            }
+
+            console.log('User record created successfully');
+
+            // Create shop
+            console.log('Creating shop record...');
+            try {
                 const shop = await createShop({
                     owner_id: data.user.id,
                     shop_name: shopData.shopName,
@@ -96,13 +113,20 @@ export default function BarberRegister() {
                     closing_time: shopData.closingTime,
                 });
 
+                console.log('Shop created successfully:', shop);
+
                 if (!shop) {
-                    throw new Error('Failed to create shop');
+                    throw new Error('Failed to create shop - no data returned');
                 }
 
+                console.log('Registration complete, redirecting...');
                 router.push('/barber/dashboard');
+            } catch (shopError: any) {
+                console.error('Shop creation error:', shopError);
+                throw new Error('Failed to create shop: ' + (shopError.message || 'Unknown error'));
             }
         } catch (err: any) {
+            console.error('Registration error:', err);
             setError(err.message || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
