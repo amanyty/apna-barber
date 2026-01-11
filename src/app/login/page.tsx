@@ -49,16 +49,29 @@ export default function Login() {
                 } else if (userData) {
                     router.push('/dashboard');
                 } else {
-                    // User exists in Auth but not in public.users - create profile
+                    // User exists in Auth but not in public.users - auto-detect user type
+                    // Check if they own a shop (indicates they're a barber)
+                    const { data: ownedShop } = await supabase
+                        .from('shops')
+                        .select('id')
+                        .eq('owner_id', data.user.id)
+                        .single();
+
+                    const detectedUserType = ownedShop ? 'barber' : 'customer';
+
                     const { error: insertError } = await supabase.from('users').insert({
                         id: data.user.id,
                         email: email,
                         full_name: 'User',
-                        user_type: 'customer'
+                        user_type: detectedUserType
                     });
 
                     if (!insertError) {
-                        router.push('/dashboard');
+                        if (detectedUserType === 'barber') {
+                            router.push('/barber/dashboard');
+                        } else {
+                            router.push('/dashboard');
+                        }
                     } else {
                         setError('Account profile missing. Please register again.');
                     }
