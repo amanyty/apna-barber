@@ -31,17 +31,44 @@ export default function Login() {
             if (signInError) throw signInError;
 
             if (data.user) {
-                // Check user type to redirect appropriately
-                const { data: userData } = await supabase
+                // Check user type and admin status to redirect appropriately
+                const { data: userData, error: userError } = await supabase
                     .from('users')
-                    .select('user_type')
+                    .select('user_type, is_admin')
                     .eq('id', data.user.id)
                     .single();
 
-                if (userData?.user_type === 'barber') {
+                if (userError && userError.code !== 'PGRST116') {
+                    console.error('Error fetching user details:', userError);
+                }
+
+                if (userData?.is_admin) {
+                    router.push('/admin/dashboard');
+                    router.refresh(); // Ensure auth state is updated
+                } else if (userData?.user_type === 'barber') {
                     router.push('/barber/dashboard');
-                } else {
+                    router.refresh();
+                } else if (userData) {
+                    // Default to customer dashboard for customers
                     router.push('/dashboard');
+                    router.refresh();
+                } else {
+                    // User exists in Auth but not in public.users (likely from the registration bug)
+                    // We can try to recover or show an error
+                    // For now, let's treat them as a new customer and create the record
+                    const { error: insertError } = await supabase.from('users').insert({
+                        id: data.user.id,
+                        email: email,
+                        full_name: 'User', // Placeholder
+                        user_type: 'customer'
+                    });
+
+                    if (!insertError) {
+                        router.push('/dashboard');
+                        router.refresh();
+                    } else {
+                        setError('Account profile missing. Please register again.');
+                    }
                 }
             }
         } catch (err: any) {

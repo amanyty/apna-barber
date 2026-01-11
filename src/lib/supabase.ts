@@ -412,3 +412,76 @@ export const getShopStats = async (shopId: string) => {
         pendingPayments: appointments.filter(a => a.payment_status === 'pending').length,
     };
 };
+// Admin queries
+export const getAdminStats = async () => {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get total counts
+    const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const { count: shopsCount } = await supabase.from('shops').select('*', { count: 'exact', head: true });
+    const { count: appointmentsCount } = await supabase.from('appointments').select('*', { count: 'exact', head: true });
+
+    // Get revenue
+    const { data: completedAppointments } = await supabase
+        .from('appointments')
+        .select('total_amount, updated_at')
+        .eq('status', 'completed');
+
+    const totalRevenue = completedAppointments?.reduce((sum, a) => sum + (a.total_amount || 0), 0) || 0;
+
+    // Get stats for today
+    const { count: todayBookings } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('appointment_date', today);
+
+    return {
+        totalUsers: usersCount || 0,
+        totalShops: shopsCount || 0,
+        totalAppointments: appointmentsCount || 0,
+        totalRevenue,
+        todayBookings: todayBookings || 0,
+    };
+};
+
+export const getAllUsers = async () => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+};
+
+export const getAllShopsAdmin = async () => {
+    const { data, error } = await supabase
+        .from('shops')
+        .select('*, users:owner_id(full_name, email)')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+};
+
+export const toggleShopStatus = async (shopId: string, isActive: boolean) => {
+    const { data, error } = await supabase
+        .from('shops')
+        .update({ is_active: isActive })
+        .eq('id', shopId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const deleteUser = async (userId: string) => {
+    // This assumes cascading deletes handle related data
+    const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+    if (error) throw error;
+};

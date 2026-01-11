@@ -10,6 +10,7 @@ interface AuthContextType {
     loading: boolean;
     signOut: () => Promise<void>;
     refreshUserData: () => Promise<void>;
+    isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,8 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserData(null);
     };
 
+    const isAdmin = userData?.is_admin === true;
+
     return (
-        <AuthContext.Provider value={{ user, userData, loading, signOut: handleSignOut, refreshUserData }}>
+        <AuthContext.Provider value={{ user, userData, loading, signOut: handleSignOut, refreshUserData, isAdmin }}>
             {children}
         </AuthContext.Provider>
     );
